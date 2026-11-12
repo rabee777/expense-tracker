@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Student Expense Tracker</title>
+<style>
+:root{--bg:#070816;--panel:#10132e;--ink:#e6f4ff;--mute:#8a93b8;--a:#5ee7ff;--line:rgba(140,160,255,.2);--bad:#ff5c8a;color-scheme:dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:light){:root{--bg:#f2f5ff;--panel:#e4e9ff;--ink:#0d1030;--mute:#4b5380;--a:#0089b3;--line:rgba(60,70,160,.25);--bad:#d4245a;color-scheme:light}}
+*{box-sizing:border-box;margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;padding:20px;max-width:620px;margin:auto}
+h1{font-size:1.6rem}p.s{color:var(--mute);margin:4px 0 16px}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+input,select,button{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+input,select{flex:1;min-width:110px}button{cursor:pointer}
+button.go{background:var(--a);color:#06101e;border-color:var(--a);font-weight:600}
+:focus-visible{outline:2px solid var(--a);outline-offset:2px}
+.big{font-size:2rem;font-weight:700}.mute{color:var(--mute);font-size:13px}
+.meter{height:10px;background:var(--line);border-radius:9px;overflow:hidden;margin:10px 0 4px}.meter i{display:block;height:100%;background:var(--a);width:0;transition:width .4s}
+.cat{display:grid;grid-template-columns:90px 1fr auto;gap:10px;align-items:center;font-size:14px;margin-top:8px}
+.cat .meter{margin:0;height:8px}
+.item{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.item:first-child{border-top:0}.item button{padding:4px 10px;color:var(--bad)}
+</style>
+</head>
+<body>
+<h1>Student Expense Tracker</h1>
+<p class="s">Log what you spend, set a monthly budget, and see where the money goes.</p>
+<div class="box">
+<div class="mute">Spent this session</div><div class="big" id="tot">₹0</div>
+<div class="meter"><i id="bud"></i></div>
+<div class="row" style="align-items:center;justify-content:space-between"><span class="mute" id="left"></span><label class="mute">Budget ₹ <input id="b" type="number" min="0" value="5000" style="width:100px;flex:none;padding:6px 8px"></label></div>
+</div>
+<div class="box">
+<div class="row"><input id="t" placeholder="What did you buy?" aria-label="Item"><input id="a" type="number" min="0" placeholder="Amount ₹" aria-label="Amount">
+<select id="c" aria-label="Category"><option>Food</option><option>Travel</option><option>Study</option><option>Fun</option><option>Other</option></select><button id="add" class="go">Add</button></div>
+</div>
+<div class="box"><div id="cats"></div></div>
+<div class="box"><div id="list"></div></div>
+<script>
+const $=id=>document.getElementById(id);let items=[];
+try{items=JSON.parse(localStorage.getItem("ex")||"[]");$("b").value=localStorage.getItem("bd")||5000}catch(e){}
+const save=()=>{try{localStorage.setItem("ex",JSON.stringify(items));localStorage.setItem("bd",$("b").value)}catch(e){}};
+const inr=n=>"₹"+Math.round(n).toLocaleString("en-IN");
+function esc(s){const d=document.createElement("div");d.textContent=s;return d.innerHTML}
+function render(){const tot=items.reduce((s,x)=>s+x.a,0),b=+$("b").value||0;
+$("tot").textContent=inr(tot);$("bud").style.width=b?Math.min(100,tot/b*100)+"%":"0";$("bud").style.background=tot>b&&b?"var(--bad)":"var(--a)";
+$("left").textContent=!b?"Set a budget":tot>b?"Over budget by "+inr(tot-b):inr(b-tot)+" left";
+const by={};items.forEach(x=>by[x.c]=(by[x.c]||0)+x.a);
+$("cats").innerHTML=Object.keys(by).length?Object.entries(by).sort((p,q)=>q[1]-p[1]).map(([k,v])=>`<div class="cat"><span>${k}</span><div class="meter"><i style="width:${v/tot*100}%"></i></div><span>${inr(v)}</span></div>`).join(""):'<span class="mute">Add an expense to see your category breakdown.</span>';
+$("list").innerHTML=items.length?items.map((x,i)=>`<div class="item"><span>${esc(x.t)} <span class="mute">· ${x.c}</span></span><span>${inr(x.a)} <button data-i="${i}" aria-label="Delete ${esc(x.t)}">✕</button></span></div>`).join(""):'<span class="mute">No expenses yet.</span>';
+save()}
+$("add").onclick=()=>{const t=$("t").value.trim(),a=+$("a").value;if(!t||!(a>0)){$("t").focus();return}items.unshift({t,a,c:$("c").value});$("t").value="";$("a").value="";render();$("t").focus()};
+$("list").onclick=e=>{const i=e.target.dataset.i;if(i!==undefined){items.splice(+i,1);render()}};
+$("b").oninput=render;
+["t","a"].forEach(id=>$(id).addEventListener("keydown",e=>{if(e.key==="Enter")$("add").click()}));
+render();
+</script>
+</body>
+</html>
